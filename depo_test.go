@@ -1,6 +1,7 @@
 package depo_test
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/k1ender/depo"
@@ -50,4 +51,40 @@ func TestPtr(t *testing.T) {
 	if kv.values["test"] != "test" {
 		t.Errorf("expected kv.values['test'] to be 'test', got '%s'", kv.values["test"])
 	}
+}
+
+type mutexDep struct {
+	val int
+	mu  sync.Mutex
+}
+
+func newMutexDep() *mutexDep {
+	return &mutexDep{
+		val: 0,
+	}
+}
+
+func TestMutex(t *testing.T) {
+	dep := newMutexDep()
+	depo := depo.New(dep)
+	wg := sync.WaitGroup{}
+	depo.Use(func(dep *mutexDep) {
+		for range 100 {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				dep.mu.Lock()
+				dep.val++
+				dep.mu.Unlock()
+			}()
+		}
+	})
+	wg.Wait()
+	depo.Use(func(dep *mutexDep) {
+		dep.mu.Lock()
+		if dep.val != 100 {
+			t.Errorf("expected dep.val to be 100, got %d", dep.val)
+		}
+		dep.mu.Unlock()
+	})
 }
