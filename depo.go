@@ -5,6 +5,12 @@ import (
 	"reflect"
 )
 
+var (
+	ErrDependencyNotFound = errors.New("dependency not found")
+	ErrFunctionIsNil      = errors.New("function is nil")
+	ErrIsNotAFunction     = errors.New("is not a function")
+)
+
 type DependencyPool struct {
 	avaliableDeps map[string]any
 }
@@ -23,12 +29,12 @@ func New(
 
 func (d *DependencyPool) Use(fun any) error {
 	if fun == nil {
-		return errors.New("fun is nil")
+		return ErrFunctionIsNil
 	}
 
 	typ := reflect.TypeOf(fun)
 	if typ.Kind() != reflect.Func {
-		return errors.New("fun is not a function")
+		return ErrIsNotAFunction
 	}
 
 	numParams := typ.NumIn()
@@ -43,7 +49,7 @@ func (d *DependencyPool) Use(fun any) error {
 		}
 
 		if _, ok := d.avaliableDeps[param.Name()]; !ok {
-			return errors.New("dependency not found")
+			return ErrDependencyNotFound
 		}
 		callDeps[i] = reflect.ValueOf(d.avaliableDeps[param.Name()])
 	}
@@ -52,4 +58,14 @@ func (d *DependencyPool) Use(fun any) error {
 	call.Call(callDeps)
 
 	return nil
+}
+
+func (d *DependencyPool) Has(dep any) bool {
+	_, ok := d.avaliableDeps[reflect.TypeOf(dep).Elem().Name()]
+	return ok
+}
+
+func (d *DependencyPool) HasString(name string) bool {
+	_, ok := d.avaliableDeps[name]
+	return ok
 }

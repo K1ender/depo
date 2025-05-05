@@ -88,3 +88,24 @@ func TestMutex(t *testing.T) {
 		dep.mu.Unlock()
 	})
 }
+
+type testDep2 struct {
+	val string
+}
+
+func newTestDep2() *testDep2 {
+	return &testDep2{
+		val: "test",
+	}
+}
+
+func TestHas(t *testing.T) {
+	dep := newTestDep2()
+	depo := depo.New(dep)
+	if !depo.Has(dep) {
+		t.Errorf("expected depo.Has(dep) to be true")
+	}
+	if depo.Has(newTestDep()) {
+		t.Errorf("expected depo.Has(newTestDep()) to be false")
+	}
+}
